@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QFormLayout, QGroupBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QGroupBox, QLayoutItem
 from PyQt6.QtWidgets import QPushButton, QLabel, QFileDialog, QCheckBox, QDateTimeEdit, QVBoxLayout
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, Qt
 import sys
 import fileops
 import datetime
@@ -12,9 +12,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.dirwindow = None
 
-        chdir = QPushButton()
-        chdir.clicked.connect(self.chdir_click)
-
         self.cbl1 = QCheckBox("Линия 1")
         self.cbl2 = QCheckBox("Линия 2")
         self.cbl3 = QCheckBox("Линия 3")
@@ -24,27 +21,30 @@ class MainWindow(QMainWindow):
         h.addWidget(self.cbl2)
         h.addWidget(self.cbl3)
         lineselect.setLayout(h)
-        lineselect.setAlignment(1)# align left
 
         lbts = QLabel("Начало периода")
-        lbts.setAlignment(1)
         lbte = QLabel("Конец периода")
-        lbte.setAlignment(1)
         self.timestart = QDateTimeEdit(datetime.datetime.now())
-        self.timestart.setAlignment(2)
         self.timeend = QDateTimeEdit(datetime.datetime.now())
-        self.timeend.setAlignment(2)
 
         btresult = QPushButton("Сохранить")
         btresult.clicked.connect(self.GetResult)
         btchdir = QPushButton("Изменить папку логов")
         btchdir.clicked.connect(self.chdir_click)
 
-        layout = QFormLayout()
-        layout.addRow(lbts, self.timestart)
-        layout.addRow(lbte, self.timeend)
-        layout.addWidget(lineselect)
-        layout.addRow(btresult, btchdir)
+        alnl = Qt.AlignmentFlag(1)
+        alnr = Qt.AlignmentFlag(2)
+        alnu = Qt.AlignmentFlag(0x20)
+        alnp = Qt.AlignmentFlag(0x40)
+        alnc = Qt.AlignmentFlag(4) and Qt.AlignmentFlag(0x80)
+
+        layout = QGridLayout()
+        layout.addWidget(lbts, 0, 0)
+        layout.addWidget(lbte, 0, 2)
+        layout.addWidget(self.timestart, 0, 1)
+        layout.addWidget(self.timeend, 0, 3)
+        layout.addWidget(lineselect, 1, 0)
+        layout.addWidget(btresult, 3, 0)
 
         self.setWindowTitle("Статистика производства хлеба")
         container = QWidget()
@@ -123,8 +123,7 @@ class DirectoryChooseWindow(QMainWindow):
         self.close()
         return
 
-
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec()
+class WarnWindow(QMainWindow):
+    msg = QLabel('Вы не указали расположение папок')
+    l = QGridLayout
+    l.addWidget(msg)
