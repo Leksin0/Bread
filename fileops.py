@@ -1,14 +1,13 @@
-import os
 import sqlite3
 import csv
+import json
+import os
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.axis import DateAxis
 
-#======= global
-linestmdir = []
-sqlconsole = object
+
 '''cumpleted '''
 #======================================================================================================================= database
 
@@ -28,101 +27,120 @@ def DBInit():
             time DATETIME NOT NULL,
             loafs INTEGER NOT NULL,
             defective INTEGER NOT NULL)'''
-                
     q2 = '''CREATE TABLE LineTwo (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             time DATETIME NOT NULL,
             loafs INTEGER NOT NULL,
             defective INTEGER NOT NULL)'''
-                
     q3 = '''CREATE TABLE LineThree (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             time DATETIME NOT NULL,
             loafs INTEGER NOT NULL,
             defective INTEGER NOT NULL)'''
-
     sqlconsole.execute(q1)
     sqlconsole.execute(q2)
     sqlconsole.execute(q3)
 
-'''cumpleted '''
+'''cumpleted'''
 #======================================================================================================================= settings
 
-def SaveSettings(l1lt, l1dir, l2lt, l2dir, l3lt, l3dir):
-    doc = open('settings.txt', 's')
-    doc.write(f"{l1dir};;{l1lastime}\n")
-    doc.write(f"{l2dir};;{l2lastime}\n")
-    doc.write(f"{l3dir};;{l3lastime}\n")
+def SaveSettings(key, value):
+    doc = open('settings.json', mode='r')
+    data = json.load(doc)
+    data.update({key: value})
     doc.close()
-    return
-
-def LoadSettings():
-    global linestmdir
-    doc = open('settings.txt', 'r')
-    linestmdir.append(doc.read().split(';;'))
-    linestmdir.append(doc.read().split(';;'))
-    linestmdir.append(doc.read().split(';;'))
+    os.remove('settings.json')
+    doc = doc = open('settings.json', mode='w')
+    json.dump(data, doc)
     doc.close()
-    return
 
+def LoadSettings(key):
+    doc = open('settings.json', mode='r')
+    data = json.load(doc)
+    doc.close
+    return data[key]
+
+'''cumpleted '''
 #======================================================================================================================= data operations
 
-def LoadData(line, lasttime):
-    path = linestmdir[line - 1][0]
-    pattern = "Detailed min</>.csv.csv" #2022 - 11 - 28 - 19 - 00 - 00
+def LoadData(line, lastime):
+    dirpath = LoadSettings(f"{line}path")
+    while True:
+        try:
+            pattern = "Detailed min</>.csv.csv"
+            new = str(lastime)
+            new = new.replace(' ', '-')
+            new = new.replace(':', '-')
+            path = dirpath + pattern.replace('</>', new)
+            LoadLogFile(line, path)
+        except:
+            break
+        else:
+            if lastime.hour == 7:
+                lastime = lastime.replace(hour=19)
+            else:
+                try:
+                    lastime = lastime.replace(day=lastime.day+1, hour=7)
+                except:
+                    try:
+                        lastime = lastime.replace(month=lastime.month+1, day=1, hour=7)
+                    except:
+                        lastime = lastime.replace(year=lastime.year+1, month=1, day=1, hour=7)
+    SaveSettings(f"{line}time", lastime)
 
 
-def LoadLogFile(filepath):
-    if lineonedir in filepath:
+def LoadLogFile(lnum, filepath):
+    if lnum == 1:
         line = 'LineOne'
-    elif linetwodir in filepath:
+    elif lnum == 2:
         line = 'LineTwo'
-    elif linethreedir in filepath:
+    elif lnum == 3:
         line = 'LineThree'
     doc = open(filepath, encoding='Windows-1251')
     reader = csv.reader(doc)
     reader.__next__()
     reader.__next__()
     for row in reader:
-      st = row[0]
-      log = [st.split('  ')[0]]
-      for j in st.split('  ')[1].split(';'):
-        log.append(j)
-      dtm = (log[0].split('.'))[::-1] + log[1].split(':')
-      for d in dtm:
-          log.append(d)
-      del log[0]
-      del log[0]
-      dtm = datetime(int(log[2]), int(log[3]), int(log[4]), int(log[5]), int(log[6]), 0)
-      print(dtm)
-      print(row)
-      sqlconsole.execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{dtm}', {log[1]}, {log[0]})")
-    return
+        st = row[0]
+        log = [st.split('  ')[0]]
+        for j in st.split('  ')[1].split(';'):
+            log.append(j)
+        dtm = (log[0].split('.'))[::-1] + log[1].split(':')
+        for d in dtm:
+            log.append(d)
+        del log[0]
+        del log[0]
+        dtm = datetime(int(log[2]), int(log[3]), int(log[4]), int(log[5]), int(log[6]))
+        sqlconsole.execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{dtm}', {log[1]}, {log[0]})")
 
 def SearchData(timestart, timeend, line):
-    res = [[]]
-    for line in lines:
-        if 1 in lines:
-            r1 = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {timestart} AND {timeend}")
-            res[0].append(1)
-            res.append(list(r1))
-        if 2 in lines:
-            r1 = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {timestart} AND {timeend}")
-            res[0].append(2)
-            res.append(list(r2))
-        if 3 in lines:
-            r1 = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
-            res[0].append(3)
-            res.append(list(r3))
+    if line == 1:
+        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {timestart} AND {timeend}")
+    elif line == 2:
+        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {timestart} AND {timeend}")
+    elif line == 3:
+        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
     return res
 
 #======================================================================================================================= result
-def Result(dtms, dtme, lines, chart): # TODO
+def Result(dtms, dtme, lines, unit, chart, erp): # TODO
+    for line in [1, 2, 3]: #DB update
+        LoadData(line, LoadSettings(f"{line}time"))
+
     wb = Workbook()
     ws = wb.active
-    #rows = SearchData(1, 2, 3) # TODO </ref> SearcData <ref>
-    for row in rows:
-        ws.append(row)
+    for l in lines:# TODO ---
+        rows = SearchData(dtms, dtme, line)
+        if unit == 'h':
+            pass
+        if unit == 'd':
+            pass
+        if unit == 'w':
+            pass
+        if unit == 'm':
+            pass
+        for row in rows:
+            ws.append(row)
     if chart:
         chart = LineChart()
         chart.title = ""
@@ -131,7 +149,7 @@ def Result(dtms, dtme, lines, chart): # TODO
         chart.y_axis.crossAx = 500
         chart.x_axis.title = "Date"
         chart.x_axis = DateAxis(crossAx=100)
-        if #TODO
+        if true: #TODO
             chart.x_axis.number_format = 'dd-mmm'
         else:
             a #TODO
@@ -144,7 +162,7 @@ def Result(dtms, dtme, lines, chart): # TODO
         ws.add_chart(chart, "E1")
 
     wb.save("some_cringe_name.xlsx")
-
+    return
 #============ TEST CODE
-
+# кто прочитал тот лох
 
