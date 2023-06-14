@@ -1,9 +1,7 @@
+from fileops import *
+import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QGroupBox, QVBoxLayout, QFormLayout
 from PyQt6.QtWidgets import QPushButton, QLabel, QFileDialog, QCheckBox, QDateTimeEdit, QRadioButton, QTextEdit
-from PyQt6.QtCore import QSize, Qt
-import sys
-import fileops
-import datetime
 
 
 
@@ -11,7 +9,6 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.dirwindow = None
-        self.waitwindow = None
         self.lbwait = QLabel("Пожалуйста, подождите")
 
         self.cbl1 = QCheckBox("Линия 1")
@@ -46,19 +43,13 @@ class MainWindow(QMainWindow):
 
         lbts = QLabel("Начало периода")
         lbte = QLabel("Конец периода")
-        self.timestart = QDateTimeEdit(datetime.datetime.now())
-        self.timeend = QDateTimeEdit(datetime.datetime.now())
+        self.timestart = QDateTimeEdit()
+        self.timeend = QDateTimeEdit()
 
-        btresult = QPushButton("Готово")
-        btresult.clicked.connect(self.GetResult)#TODO              > > > H E R E < < <
+        self.btresult = QPushButton("Готово")
+        self.btresult.clicked.connect(self.GetResult)#TODO              > > > H E R E < < <
         btchdir = QPushButton("Указать папку первичныых данных")
         btchdir.clicked.connect(self.chdir_click)#TODO              > > > H E R E < < <
-
-        alnl = Qt.AlignmentFlag(1)
-        alnr = Qt.AlignmentFlag(2)
-        alnu = Qt.AlignmentFlag(0x20)
-        alnp = Qt.AlignmentFlag(0x40)
-        alnc = Qt.AlignmentFlag(4) and Qt.AlignmentFlag(0x80)
 
         layout = QGridLayout()
         layout.addWidget(lbts, 0, 0)
@@ -69,7 +60,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(lineselect, 2, 1, 1, 1)
         layout.addWidget(addition, 2, 2, 1, 1)
         layout.addWidget(btchdir, 3, 0)
-        layout.addWidget(btresult, 3, 1)
+        layout.addWidget(self.btresult, 3, 1)
 
         self.setWindowTitle("Статистика производства хлеба")
         self.container = QWidget()
@@ -82,6 +73,13 @@ class MainWindow(QMainWindow):
         self.dirwindow.show()
 
     def GetResult(self):
+        dirscorr = False
+        while not dirscorr:
+            if LoadSettings("1path") != None and LoadSettings("1path") != None and LoadSettings("1path") != None:
+                dirscorr = True
+            else:
+                self.btresult.setText("Укажите папки первичных данных")
+                return
         dtms = self.timestart.text()
         dtme = self.timeend.text()
         lines = []
@@ -110,43 +108,41 @@ class MainWindow(QMainWindow):
             chart = True
         if self.cberp:
             erp = True
-
         self.setCentralWidget(self.lbwait)
-        fileops.Result(dtms, dtme, lines, unit, chart, erp)
+        Result(dtms, dtme, lines, unit, chart, erp)
         self.setCentralWidget(self.container)
-
 
 
 class DirectoryChooseWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
-        self.btnl1 = QPushButton("Укажите папку")
+        if LoadSettings("1path") is None:
+            self.btnl1 = QPushButton("Укажите папку")
+        else:
+            self.btnl1 = QPushButton(LoadSettings("1path"))
         self.btnl1.clicked.connect(self.btnl1_click)
-        self.btnl2 = QPushButton("Укажите папку")
+        if LoadSettings("2path") is None:
+            self.btnl2 = QPushButton("Укажите папку")
+        else:
+            self.btnl2 = QPushButton(LoadSettings("2path"))
         self.btnl2.clicked.connect(self.btnl2_click)
-        self.btnl3 = QPushButton("Укажите папку")
+        if LoadSettings("3path") is None:
+            self.btnl3 = QPushButton("Укажите папку")
+        else:
+            self.btnl3 = QPushButton(LoadSettings("3path"))
         self.btnl3.clicked.connect(self.btnl3_click)
         lbl1 = QLabel("Линия 1")
         lbl2 = QLabel("Линия 2")
         lbl3 = QLabel("Линия 3")
-
         btnok = QPushButton("OK")
         btnok.clicked.connect(self.ok_click)
         btncancel = QPushButton("Отмена")
         btncancel.clicked.connect(self.cancel_click)
-
-        alnl = Qt.AlignmentFlag(1)
-        lbl1.setAlignment(alnl)
-        lbl2.setAlignment(alnl)
-        lbl3.setAlignment(alnl)
-
         layout = QFormLayout()
         layout.addRow(lbl1, self.btnl1)
         layout.addRow(lbl2, self.btnl2)
         layout.addRow(lbl3, self.btnl3)
         layout.addRow(btnok, btncancel)
-
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
@@ -168,22 +164,24 @@ class DirectoryChooseWindow(QMainWindow):
         return
 
     def ok_click(self):
-        fileops.SaveSettings(self.btnl1.text())
+        if self.btnl1.text() != "Укажите папку":
+            SaveSettings("1path", self.btnl1.text())
+        else:
+            SaveSettings("1path", None)
+        if self.btnl2.text() != "Укажите папку":
+            SaveSettings("2path", self.btnl2.text())
+        else:
+            SaveSettings("2path", None)
+        if self.btnl3.text() != "Укажите папку":
+            SaveSettings("3path", self.btnl3.text())
+        else:
+            SaveSettings("3path", None)
         self.close()
         return
 
     def cancel_click(self):
-        self.btnl1.setText("Укажите папку")
-        self.btnl1.setText("Укажите папку")
-        self.btnl1.setText("Укажите папку")
         self.close()
         return
-
-
-
-
-
-
 
 
 class ERPInput(QMainWindow):

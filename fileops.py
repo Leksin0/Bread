@@ -8,18 +8,28 @@ from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.axis import DateAxis
 
 
-'''cumpleted '''
-#======================================================================================================================= database
+def Setup():
+    doc = open('settings.json', mode='w')
+    json.dump({1}, doc)
+    DBInit()
 
-def DBConnect():
-    global sqlconsole
-    dbConnection = sqlite3.connect('BreadHistory.db')
-    sqlconsole = dbConnection.cursor()
+def Reset():#DANGEROUS
     try:
+        os.remove('settings.json')
+        doc = open('settings.json', mode='w')
+        json.dump({}, doc)
+    except:
+        pass
+    try:
+        os.remove('BreadHistory.db')
         DBInit()
     except:
         pass
-    return
+
+
+def DBCursor():
+    dbConnection = sqlite3.connect('BreadHistory.db')
+    return dbConnection.cursor()
 
 def DBInit():
     q1 = '''CREATE TABLE LineOne (
@@ -37,12 +47,9 @@ def DBInit():
             time DATETIME NOT NULL,
             loafs INTEGER NOT NULL,
             defective INTEGER NOT NULL)'''
-    sqlconsole.execute(q1)
-    sqlconsole.execute(q2)
-    sqlconsole.execute(q3)
-
-'''cumpleted'''
-#======================================================================================================================= settings
+    DBCursor().execute(q1)
+    DBCursor().execute(q2)
+    DBCursor().execute(q3)
 
 def SaveSettings(key, value):
     doc = open('settings.json', mode='r')
@@ -50,7 +57,7 @@ def SaveSettings(key, value):
     data.update({key: value})
     doc.close()
     os.remove('settings.json')
-    doc = doc = open('settings.json', mode='w')
+    doc = open('settings.json', mode='w')
     json.dump(data, doc)
     doc.close()
 
@@ -58,16 +65,18 @@ def LoadSettings(key):
     doc = open('settings.json', mode='r')
     data = json.load(doc)
     doc.close
-    return data[key]
+    try:
+        return data[key]
+    except:
+        SaveSettings(key, None)
+        return None
 
-'''cumpleted '''
-#======================================================================================================================= data operations
 
 def LoadData(line, lastime):
     dirpath = LoadSettings(f"{line}path")
     while True:
         try:
-            pattern = "Detailed min</>.csv.csv"
+            pattern = "/Detailed min</>.csv.csv"
             new = str(lastime)
             new = new.replace(' ', '-')
             new = new.replace(':', '-')
@@ -87,7 +96,6 @@ def LoadData(line, lastime):
                     except:
                         lastime = lastime.replace(year=lastime.year+1, month=1, day=1, hour=7)
     SaveSettings(f"{line}time", lastime)
-
 
 def LoadLogFile(lnum, filepath):
     if lnum == 1:
@@ -111,18 +119,19 @@ def LoadLogFile(lnum, filepath):
         del log[0]
         del log[0]
         dtm = datetime(int(log[2]), int(log[3]), int(log[4]), int(log[5]), int(log[6]))
-        sqlconsole.execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{dtm}', {log[1]}, {log[0]})")
+        DBCursor().execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{dtm}', {log[1]}, {log[0]})")
 
 def SearchData(timestart, timeend, line):
     if line == 1:
-        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {timestart} AND {timeend}")
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {timestart} AND {timeend}")
     elif line == 2:
-        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {timestart} AND {timeend}")
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {timestart} AND {timeend}")
     elif line == 3:
-        res = sqlconsole.execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
     return res
 
-#======================================================================================================================= result
+#TODO                                >  >  RR  EE  SS  UU  LL  TT  <  <
+
 def Result(dtms, dtme, lines, unit, chart, erp): # TODO
     for line in [1, 2, 3]: #DB update
         LoadData(line, LoadSettings(f"{line}time"))
@@ -163,6 +172,5 @@ def Result(dtms, dtme, lines, unit, chart, erp): # TODO
 
     wb.save("some_cringe_name.xlsx")
     return
-#============ TEST CODE
-# кто прочитал тот лох
 
+# кто прочитал тот лох
