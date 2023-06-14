@@ -7,25 +7,24 @@ from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.axis import DateAxis
 
-
 def Setup():
     doc = open('settings.json', mode='w')
-    json.dump({1}, doc)
+    json.dump({}, doc)
+    doc.close()
+    SaveSettings("1time", "27.11.2022  07:00")
+    SaveSettings("2time", "27.11.2022  07:00")
+    SaveSettings("3time", "27.11.2022  07:00")
     DBInit()
 
 def Reset():#DANGEROUS
     try:
         os.remove('settings.json')
-        doc = open('settings.json', mode='w')
-        json.dump({}, doc)
     except:
         pass
     try:
         os.remove('BreadHistory.db')
-        DBInit()
     except:
         pass
-
 
 def DBCursor():
     dbConnection = sqlite3.connect('BreadHistory.db')
@@ -70,7 +69,6 @@ def LoadSettings(key):
     except:
         SaveSettings(key, None)
         return None
-
 
 def LoadData(line, lastime):
     dirpath = LoadSettings(f"{line}path")
@@ -130,24 +128,22 @@ def SearchData(timestart, timeend, line):
         res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
     return res
 
-#TODO                                >  >  RR  EE  SS  UU  LL  TT  <  <
-
-def Result(dtms, dtme, lines, unit, chart, erp): # TODO
-    for line in [1, 2, 3]: #DB update
-        LoadData(line, LoadSettings(f"{line}time"))
-
+def Result(dtms, dtme, lines, unit, chart, erp):
+    frow = []
+    for line in [1, 2, 3]:
+        lastime = LoadSettings(f"{line}time")
+        LoadData(line, lastime)#DB update
+        frow.append("")
+        frow.append(f"Линия {line}")
+        
+    if erp:
+        frow.append("")
+        frow.append(f"Норма")
     wb = Workbook()
     ws = wb.active
-    for l in lines:# TODO ---
+    for l in lines:
         rows = SearchData(dtms, dtme, line)
-        if unit == 'h':
-            pass
-        if unit == 'd':
-            pass
-        if unit == 'w':
-            pass
-        if unit == 'm':
-            pass
+
         for row in rows:
             ws.append(row)
     if chart:
@@ -158,11 +154,18 @@ def Result(dtms, dtme, lines, unit, chart, erp): # TODO
         chart.y_axis.crossAx = 500
         chart.x_axis.title = "Date"
         chart.x_axis = DateAxis(crossAx=100)
-        if true: #TODO
+        if unit == 'h':
+            chart.x_axis.number_format = 'dd-mmm-hh:mm'
+            chart.x_axis.majorTimeUnit = "hours"
+        elif unit == 'd':
             chart.x_axis.number_format = 'dd-mmm'
-        else:
-            a #TODO
             chart.x_axis.majorTimeUnit = "days"
+        elif unit == 'w':
+            chart.x_axis.number_format = 'dd-mmm'
+            chart.x_axis.majorTimeUnit = "days"
+        elif unit == 'm':
+            chart.x_axis.number_format = 'mmm-yyyy'
+            chart.x_axis.majorTimeUnit = "months"
 
         data = Reference(ws, min_col=2, min_row=1, max_col=4, max_row=7)
         chart.add_data(data, titles_from_data=True)
@@ -170,7 +173,7 @@ def Result(dtms, dtme, lines, unit, chart, erp): # TODO
         chart.set_categories(dates)
         ws.add_chart(chart, "E1")
 
-    wb.save("some_cringe_name.xlsx")
+    wb.save(f"2Отчет за {dtms.day}.{dtms.month}-{dtme.day}.{dtme.month}.xlsx")
     return
 
 # кто прочитал тот лох

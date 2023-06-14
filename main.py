@@ -1,15 +1,17 @@
+import fileops
 from fileops import *
+import sqlite3
 import sys
+from datetime import datetime
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QGroupBox, QVBoxLayout, QFormLayout
 from PyQt6.QtWidgets import QPushButton, QLabel, QFileDialog, QCheckBox, QDateTimeEdit, QRadioButton, QTextEdit
-
-
+from PyQt6.QtCore import QSize
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.dirwindow = None
-        self.lbwait = QLabel("Пожалуйста, подождите")
+        self.erpwindow = None
 
         self.cbl1 = QCheckBox("Линия 1")
         self.cbl2 = QCheckBox("Линия 2")
@@ -46,10 +48,13 @@ class MainWindow(QMainWindow):
         self.timestart = QDateTimeEdit()
         self.timeend = QDateTimeEdit()
 
+
+        btchdir = QPushButton("Указать папки первичныых данных")
+        btchdir.clicked.connect(self.chdir_click)#TODO              > > > H E R E < < <
         self.btresult = QPushButton("Готово")
         self.btresult.clicked.connect(self.GetResult)#TODO              > > > H E R E < < <
-        btchdir = QPushButton("Указать папку первичныых данных")
-        btchdir.clicked.connect(self.chdir_click)#TODO              > > > H E R E < < <
+        bterp = QPushButton("Указать нормативы")
+        bterp.clicked.connect(self.bterp_click)#TODO
 
         layout = QGridLayout()
         layout.addWidget(lbts, 0, 0)
@@ -61,9 +66,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(addition, 2, 2, 1, 1)
         layout.addWidget(btchdir, 3, 0)
         layout.addWidget(self.btresult, 3, 1)
+        layout.addWidget(bterp, 3, 2)
 
         self.setWindowTitle("Статистика производства хлеба")
         self.container = QWidget()
+        self.container.setFixedSize(820, 250)
         self.container.setLayout(layout)
         self.setCentralWidget(self.container)
 
@@ -72,16 +79,33 @@ class MainWindow(QMainWindow):
             self.dirwindow = DirectoryChooseWindow()
         self.dirwindow.show()
 
+    def bterp_click(selfself):
+        if self.erpwindow is None:
+            self.erpwindow = ERPInput()
+        self.erpwindow.show()
+
     def GetResult(self):
         dirscorr = False
         while not dirscorr:
-            if LoadSettings("1path") != None and LoadSettings("1path") != None and LoadSettings("1path") != None:
+            if LoadSettings("1path") != None and LoadSettings("2path") != None and LoadSettings("3path") != None:
                 dirscorr = True
             else:
-                self.btresult.setText("Укажите папки первичных данных")
+                self.btresult.setText("Не указаны папки первичных данных")
                 return
         dtms = self.timestart.text()
+        log = []
+        for j in dtms.split(' ')[0].split('.'):
+            log.append(j)
+        for h in dtms.split(' ')[1].split(':'):
+            log.append(h)
+        dtms = datetime(int(log[2]), int(log[1]), int(log[0]), int(log[3]), int(log[4]))
         dtme = self.timeend.text()
+        log = []
+        for i in dtme.split(' ')[0].split('.'):
+            log.append(i)
+        for k in dtme.split(' ')[1].split(':'):
+            log.append(k)
+        dtme = datetime(int(log[2]), int(log[1]), int(log[0]), int(log[3]), int(log[4]))
         lines = []
         unit = ''
         chart = False
@@ -108,9 +132,7 @@ class MainWindow(QMainWindow):
             chart = True
         if self.cberp:
             erp = True
-        self.setCentralWidget(self.lbwait)
         Result(dtms, dtme, lines, unit, chart, erp)
-        self.setCentralWidget(self.container)
 
 
 class DirectoryChooseWindow(QMainWindow):
@@ -177,6 +199,7 @@ class DirectoryChooseWindow(QMainWindow):
         else:
             SaveSettings("3path", None)
         self.close()
+        window.btresult.setText("Готово")
         return
 
     def cancel_click(self):
@@ -239,7 +262,11 @@ class ERPInput(QMainWindow):
         self.close()
         return
 
-
+dbConnection = sqlite3.connect('BreadHistory.db')
+c = dbConnection.cursor()
+res = c.execute("SELECT * FROM LineOne")
+for i in res:
+    print(res)
 
 app = QApplication(sys.argv)
 window = MainWindow()
