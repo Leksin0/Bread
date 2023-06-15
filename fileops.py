@@ -38,6 +38,12 @@ def DBCursor():
     dbConnection = sqlite3.connect('BreadHistory.db')
     return dbConnection.cursor()
 
+def DBInsert(query):
+    con = sqlite3.connect('BreadHistory.db')
+    cur = con.cursor()
+    cur.execute(query)
+    con.commit()
+
 def DBInit():
     q1 = '''CREATE TABLE LineOne (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,33 +166,49 @@ def LoadLogFile(lnum, filepath):
         log = row[0]
         dt = log.split('  ')[0].split('.')
         tm = log.split('  ')[1].split(':')
-        dtm = datetime.datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), int(tm[1]))
-        DBCursor().execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{str(dtm)}', {row[2]}, {row[1]})")
+        dtm = datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), int(tm[1]))
+        DBInsert(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{str(dtm)}', {row[2]}, {row[1]})")
 
-def SearchData(timestart, timeend, line):
+def SearchData(timestart, timeend, line, gu):
     if line == '1':
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
+        lname = 'LineOne'
     elif line == '2':
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
+        lname = 'LineTwo'
     elif line == '3':
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
-    return res
+        lname = 'LineThree'
+    query = f"""SELECT strftime('%h', time) as grtime,
+    time,
+    SUM(loafs) as sumloafs,
+    SUM(defective) as sumdefective
+    FROM {lname} 
+    WHERE time BETWEEN'{str(timestart)}' AND '{str(timeend)}' GROUP BY grtime"""
+    print(DBCursor().execute(query))
+    return DBCursor().execute(query)
 
 def Result(dtms, dtme, lines, unit, chart, erp):
-    frow = [""]
-    for line in [1, 2, 3]:
-        LoadData(line)#DB update
-    for l in lines:
-        frow.append(f"Линия {l}")
-    if erp[0]:
-        frow.append("")
-        frow.append(f"Норма")
     wb = Workbook()
     ws = wb.active
+    mh = [1, 'B1:C1', 'D1:E1', 'F1:G1', 'H1:0']
+    for line in [1, 2, 3]:
+        LoadData(line)# DB update
+    if unit == 'h':
+        ws['A1'] = "Время"
+    else:
+        ws['A1'] = "Дата"
     for l in lines:
-        rows = SearchData(dtms, dtme, l)
+        ws[mh[mh[0]].split(':')[0]] = f"Линия {l}"
+        ws.merge_cells(mh[mh[0]])
+        mh[0] += 1
+
+    if erp[0]:
+        ws[mh[mh[0]].split(':')[0]] = f"Норматив"
+
+    for l in lines:
+        rows = SearchData(dtms, dtme, l, unit)
         for row in rows:
+            print(row)
             ws.append(row)
+
     if chart:
         chart = LineChart()
         chart.title = ""
