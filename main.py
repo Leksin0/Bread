@@ -1,3 +1,4 @@
+import fileops
 from fileops import *
 import sys
 from datetime import datetime
@@ -217,6 +218,10 @@ class DirectoryChooseWindow(QMainWindow):
         self.close()
         return
 
+try:
+    open('settings.json', 'r')
+except:
+    fileops.Setup()
 app = QApplication(sys.argv)
 window = MainWindow()
 window.show()
