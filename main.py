@@ -1,6 +1,4 @@
-import fileops
 from fileops import *
-import sqlite3
 import sys
 from datetime import datetime
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QGroupBox, QVBoxLayout, QFormLayout
@@ -85,11 +83,6 @@ class MainWindow(QMainWindow):
         if self.dirwindow is None:
             self.dirwindow = DirectoryChooseWindow()
         self.dirwindow.show()
-
-    def bterp_click(self):
-        if self.erpwindow is None:
-            self.erpwindow = ERPInput()
-        self.erpwindow.show()
 
     def rborcb_click(self):
         self.btresult.setText("Готово")
