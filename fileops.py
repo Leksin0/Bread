@@ -11,9 +11,9 @@ def Setup():
     doc = open('settings.json', mode='w')
     json.dump({}, doc)
     doc.close()
-    SaveSettings("1time", "27.11.2022  07:00")
-    SaveSettings("2time", "27.11.2022  07:00")
-    SaveSettings("3time", "27.11.2022  07:00")
+    SaveSettings("1time", "2022-11-28-07-00-00")
+    SaveSettings("2time", "2022-11-28-07-00-00")
+    SaveSettings("3time", "2022-11-28-07-00-00")
     DBInit()
 
 def Reset():#DANGEROUS
@@ -70,30 +70,74 @@ def LoadSettings(key):
         SaveSettings(key, None)
         return None
 
-def LoadData(line, lastime):
+def LoadData(line):
     dirpath = LoadSettings(f"{line}path")
+    nextime = LoadSettings(f"{line}time")
     while True:
         try:
             pattern = "/Detailed min</>.csv.csv"
-            new = str(lastime)
-            new = new.replace(' ', '-')
-            new = new.replace(':', '-')
-            path = dirpath + pattern.replace('</>', new)
+            name = pattern.replace('</>', nextime)
+            path = dirpath + name
             LoadLogFile(line, path)
-        except:
+        except FileNotFoundError:
             break
         else:
-            if lastime.hour == 7:
-                lastime = lastime.replace(hour=19)
+            log = nextime.split('-')
+            nextime = datetime(int(log[0]), int(log[1]), int(log[2]), int(log[3]))
+            print(nextime.hour)
+            if nextime.hour == 7:
+                nextime = nextime.replace(hour=19)
             else:
                 try:
-                    lastime = lastime.replace(day=lastime.day+1, hour=7)
+                    nextime = nextime.replace(day=nextime.day + 1, hour=7)
                 except:
                     try:
-                        lastime = lastime.replace(month=lastime.month+1, day=1, hour=7)
+                        nextime = nextime.replace(month=nextime.month + 1, day=1, hour=7)
                     except:
-                        lastime = lastime.replace(year=lastime.year+1, month=1, day=1, hour=7)
-    SaveSettings(f"{line}time", lastime)
+                        nextime = nextime.replace(year=nextime.year + 1, month=1, day=1, hour=7)
+            temp = []
+            temp.append(str(nextime.year))
+            temp.append(str(nextime.month))
+            if len(temp[1]) == 1:
+                temp[1] = "0" + temp[1]
+            temp.append(str(nextime.day))
+            if len(temp[2]) == 1:
+                temp[2] = "0" + temp[2]
+            temp.append(str(nextime.hour))
+            if len(temp[3]) == 1:
+                temp[3] = "0" + temp[3]
+            temp.append("00")
+            temp.append("00")
+            nextime = "-".join(temp)
+    log = nextime.split('-')
+    nextime = datetime(int(log[0]), int(log[1]), int(log[2]), int(log[3]))
+    print(nextime.hour)
+    if nextime.hour == 7:
+        nextime = nextime.replace(hour=19)
+    else:
+        nextime = nextime.replace(hour=7)
+        try:
+            nextime = nextime.replace(day=nextime.day + 1)
+        except:
+            try:
+                nextime = nextime.replace(month=nextime.month + 1, day=1)
+            except:
+                nextime = nextime.replace(year=nextime.year + 1, month=1, day=1)
+    temp = []
+    temp.append(str(nextime.year))
+    temp.append(str(nextime.month))
+    if len(temp[1]) == 1:
+        temp[1] = "0" + temp[1]
+    temp.append(str(nextime.day))
+    if len(temp[2]) == 1:
+        temp[2] = "0" + temp[2]
+    temp.append(str(nextime.hour))
+    if len(temp[3]) == 1:
+        temp[3] = "0" + temp[3]
+    temp.append("00")
+    temp.append("00")
+    nextime = "-".join(temp)
+    SaveSettings(f"{line}time", nextime)
 
 def LoadLogFile(lnum, filepath):
     if lnum == 1:
@@ -107,17 +151,13 @@ def LoadLogFile(lnum, filepath):
     reader.__next__()
     reader.__next__()
     for row in reader:
-        st = row[0]
-        log = [st.split('  ')[0]]
-        for j in st.split('  ')[1].split(';'):
-            log.append(j)
-        dtm = (log[0].split('.'))[::-1] + log[1].split(':')
-        for d in dtm:
-            log.append(d)
-        del log[0]
-        del log[0]
-        dtm = datetime(int(log[2]), int(log[3]), int(log[4]), int(log[5]), int(log[6]))
-        DBCursor().execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{dtm}', {log[1]}, {log[0]})")
+        row = row[0].split(';')
+        log = row[0]
+        print(row)
+        dt = log.split('  ')[0].split('.')
+        tm = log.split('  ')[1].split(':')
+        dtm = datetime.datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), int(tm[1]))
+        DBCursor().execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{str(dtm)}', {row[2]}, {row[1]})")
 
 def SearchData(timestart, timeend, line):
     if line == 1:
@@ -129,21 +169,18 @@ def SearchData(timestart, timeend, line):
     return res
 
 def Result(dtms, dtme, lines, unit, chart, erp):
-    frow = []
+    frow = [""]
     for line in [1, 2, 3]:
-        lastime = LoadSettings(f"{line}time")
-        LoadData(line, lastime)#DB update
-        frow.append("")
-        frow.append(f"Линия {line}")
-        
-    if erp:
+        LoadData(line)#DB update
+    for l in lines:
+        frow.append(f"Линия {l}")
+    if erp[0]:
         frow.append("")
         frow.append(f"Норма")
     wb = Workbook()
     ws = wb.active
     for l in lines:
         rows = SearchData(dtms, dtme, line)
-
         for row in rows:
             ws.append(row)
     if chart:
@@ -173,7 +210,5 @@ def Result(dtms, dtme, lines, unit, chart, erp):
         chart.set_categories(dates)
         ws.add_chart(chart, "E1")
 
-    wb.save(f"2Отчет за {dtms.day}.{dtms.month}-{dtme.day}.{dtme.month}.xlsx")
+    wb.save(f"Отчет за {dtms.day}.{dtms.month}-{dtme.day}.{dtme.month}.xlsx")
     return
-
-# кто прочитал тот лох

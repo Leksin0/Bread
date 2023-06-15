@@ -4,18 +4,20 @@ import sqlite3
 import sys
 from datetime import datetime
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QGridLayout, QGroupBox, QVBoxLayout, QFormLayout
-from PyQt6.QtWidgets import QPushButton, QLabel, QFileDialog, QCheckBox, QDateTimeEdit, QRadioButton, QTextEdit
-from PyQt6.QtCore import QSize
+from PyQt6.QtWidgets import QPushButton, QLabel, QFileDialog, QCheckBox, QDateTimeEdit, QRadioButton, QLineEdit
+from PyQt6.QtGui import QIntValidator
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.dirwindow = None
-        self.erpwindow = None
 
         self.cbl1 = QCheckBox("Линия 1")
+        self.cbl1.clicked.connect(self.rborcb_click)
         self.cbl2 = QCheckBox("Линия 2")
+        self.cbl2.clicked.connect(self.rborcb_click)
         self.cbl3 = QCheckBox("Линия 3")
+        self.cbl3.clicked.connect(self.rborcb_click)
         linhelp = QVBoxLayout()
         linhelp.addWidget(self.cbl1)
         linhelp.addWidget(self.cbl2)
@@ -24,9 +26,13 @@ class MainWindow(QMainWindow):
         lineselect.setLayout(linhelp)
 
         self.rbu1 = QRadioButton("Час")
+        self.rbu1.clicked.connect(self.rborcb_click)
         self.rbu2 = QRadioButton("Сутки")
+        self.rbu2.clicked.connect(self.rborcb_click)
         self.rbu3 = QRadioButton("Неделя")
+        self.rbu3.clicked.connect(self.rborcb_click)
         self.rbu4 = QRadioButton("Месяц")
+        self.rbu4.clicked.connect(self.rborcb_click)
         unhelp = QVBoxLayout()
         unhelp.addWidget(self.rbu1)
         unhelp.addWidget(self.rbu2)
@@ -36,7 +42,7 @@ class MainWindow(QMainWindow):
         unitselect.setLayout(unhelp)
 
         self.cbchart = QCheckBox("Добавить график")
-        self.cberp = QCheckBox("Сравнить с нормативом")
+        self.cberp = QCheckBox("Сравнить с нормой производства")
         dophelp = QVBoxLayout()
         dophelp.addWidget(self.cbchart)
         dophelp.addWidget(self.cberp)
@@ -48,29 +54,30 @@ class MainWindow(QMainWindow):
         self.timestart = QDateTimeEdit()
         self.timeend = QDateTimeEdit()
 
+        lberp = QLabel("Норма производства")
+        self.txerp = QLineEdit()
+        self.txerp.setValidator(QIntValidator())
 
-        btchdir = QPushButton("Указать папки первичныых данных")
-        btchdir.clicked.connect(self.chdir_click)#TODO              > > > H E R E < < <
+        btchdir = QPushButton("Указать расположение первичных данных")
+        btchdir.clicked.connect(self.chdir_click)
         self.btresult = QPushButton("Готово")
-        self.btresult.clicked.connect(self.GetResult)#TODO              > > > H E R E < < <
-        bterp = QPushButton("Указать нормативы")
-        bterp.clicked.connect(self.bterp_click)#TODO
+        self.btresult.clicked.connect(self.GetResult)
 
         layout = QGridLayout()
         layout.addWidget(lbts, 0, 0)
         layout.addWidget(self.timestart, 0, 1)
         layout.addWidget(lbte, 1, 0)
         layout.addWidget(self.timeend, 1, 1)
+        layout.addWidget(lberp, 0, 2)
+        layout.addWidget(self.txerp, 1, 2)
         layout.addWidget(unitselect, 2, 0, 1, 1)
         layout.addWidget(lineselect, 2, 1, 1, 1)
         layout.addWidget(addition, 2, 2, 1, 1)
         layout.addWidget(btchdir, 3, 0)
         layout.addWidget(self.btresult, 3, 1)
-        layout.addWidget(bterp, 3, 2)
 
         self.setWindowTitle("Статистика производства хлеба")
         self.container = QWidget()
-        self.container.setFixedSize(820, 250)
         self.container.setLayout(layout)
         self.setCentralWidget(self.container)
 
@@ -79,19 +86,57 @@ class MainWindow(QMainWindow):
             self.dirwindow = DirectoryChooseWindow()
         self.dirwindow.show()
 
-    def bterp_click(selfself):
+    def bterp_click(self):
         if self.erpwindow is None:
             self.erpwindow = ERPInput()
         self.erpwindow.show()
 
+    def rborcb_click(self):
+        self.btresult.setText("Готово")
+
     def GetResult(self):
-        dirscorr = False
-        while not dirscorr:
-            if LoadSettings("1path") != None and LoadSettings("2path") != None and LoadSettings("3path") != None:
-                dirscorr = True
-            else:
-                self.btresult.setText("Не указаны папки первичных данных")
+        if LoadSettings("1path") is None or LoadSettings("2path") is None or LoadSettings("3path") is None:
+            self.btresult.setText("Укажите папки первичных данных")
+            return
+        else:
+            pass
+        if not self.rbu1.isChecked() and not self.rbu2.isChecked() and not self.rbu3.isChecked() and not self.rbu4.isChecked():
+            self.btresult.setText("Выберите еденицу времени")
+            return
+        else:
+            if self.rbu1.isChecked():
+                unit = 'h'
+            elif self.rbu2.isChecked():
+                unit = 'd'
+            elif self.rbu3.isChecked():
+                unit = 'w'
+            elif self.rbu4.isChecked():
+                unit = 'm'
+        if not self.cbl1.isChecked() and not self.cbl2.isChecked() and not self.cbl3.isChecked():
+            self.btresult.setText("Выберите хотя бы одну линию")
+            return
+        else:
+            lines = []
+            if self.cbl1.isChecked():
+                lines.append('1')
+            if self.cbl2.isChecked():
+                lines.append('2')
+            if self.cbl3.isChecked():
+                lines.append('3')
+        try:
+            a = int(self.txerp.text())
+        except:
+            if self.cberp.isChecked():
+                self.btresult.setText("Укажите норму производства")
                 return
+        if self.cberp.isChecked():
+            erp = [True, a]
+        else:
+            erp = [False]
+        if self.cbchart.isChecked():
+            chart = True
+        else:
+            chart = False
         dtms = self.timestart.text()
         log = []
         for j in dtms.split(' ')[0].split('.'):
@@ -106,34 +151,7 @@ class MainWindow(QMainWindow):
         for k in dtme.split(' ')[1].split(':'):
             log.append(k)
         dtme = datetime(int(log[2]), int(log[1]), int(log[0]), int(log[3]), int(log[4]))
-        lines = []
-        unit = ''
-        chart = False
-        erp = False
-        if self.cbl1.isChecked():
-            lines.append('1')
-        if self.cbl2.isChecked():
-            lines.append('2')
-        if self.cbl3.isChecked():
-            lines.append('3')
-        else:
-            pass
-        if self.rbu1.isChecked():
-            unit = 'h'
-        elif self.rbu2.isChecked():
-            unit = 'd'
-        elif self.rbu3.isChecked():
-            unit = 'w'
-        elif self.rbu4.isChecked():
-            unit = 'm'
-        else:
-            pass
-        if self.cbchart.isChecked():
-            chart = True
-        if self.cberp:
-            erp = True
         Result(dtms, dtme, lines, unit, chart, erp)
-
 
 class DirectoryChooseWindow(QMainWindow):
     def __init__(self):
@@ -205,68 +223,6 @@ class DirectoryChooseWindow(QMainWindow):
     def cancel_click(self):
         self.close()
         return
-
-
-class ERPInput(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        self.rbu1 = QRadioButton("Час")
-        self.rbu2 = QRadioButton("Сутки")
-        self.rbu3 = QRadioButton("Месяц")
-        self.rbu4 = QRadioButton("Год")
-        unhelp = QVBoxLayout()
-        unhelp.addWidget(self.rbu1)
-        unhelp.addWidget(self.rbu2)
-        unhelp.addWidget(self.rbu3)
-        unhelp.addWidget(self.rbu4)
-        unitselect = QGroupBox("Мера времени")
-        unitselect.setLayout(unhelp)
-
-        btnok = QPushButton("OK")
-        btnok.clicked.connect(self.ok_click)
-        btncancel = QPushButton("Отмена")
-        btncancel.clicked.connect(self.cancel_click)
-
-        layout = QFormLayout()
-        layout.addRow(btnl1, self.lbl1)
-        layout.addRow(btnl2, self.lbl2)
-        layout.addRow(btnl3, self.lbl3)
-        layout.addRow(btnok, btncancel)
-
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-        self.setWindowTitle("ГДЕ ХЛЕБ ?!!??")
-
-    def btnl1_click(self):
-        res = QFileDialog.getExistingDirectory(self)
-        self.lbl1.setText(res)
-        return
-
-    def btnl2_click(self):
-        res = QFileDialog.getExistingDirectory(self)
-        self.lbl2.setText(res)
-        return
-
-    def btnl3_click(self):
-        res = QFileDialog.getExistingDirectory(self)
-        self.lbl3.setText(res)
-        return
-
-    def ok_click(self):
-        self.close()
-        return
-
-    def cancel_click(self):
-        self.close()
-        return
-
-dbConnection = sqlite3.connect('BreadHistory.db')
-c = dbConnection.cursor()
-res = c.execute("SELECT * FROM LineOne")
-for i in res:
-    print(res)
 
 app = QApplication(sys.argv)
 window = MainWindow()
