@@ -9,14 +9,16 @@ from openpyxl.chart.axis import DateAxis
 
 def Setup():
     try:
+        doc = open('settings.json', mode='r')
+        json.load(doc)
+        doc.close()
+    except:
         doc = open('settings.json', mode='w')
         json.dump({}, doc)
         doc.close()
         SaveSettings("1time", "2022-11-28-07-00-00")
         SaveSettings("2time", "2022-11-28-07-00-00")
         SaveSettings("3time", "2022-11-28-07-00-00")
-    except:
-        pass
     try:
         DBInit()
     except:
@@ -89,7 +91,6 @@ def LoadData(line):
         else:
             log = nextime.split('-')
             nextime = datetime(int(log[0]), int(log[1]), int(log[2]), int(log[3]))
-            print(nextime.hour)
             if nextime.hour == 7:
                 nextime = nextime.replace(hour=19)
             else:
@@ -116,7 +117,6 @@ def LoadData(line):
             nextime = "-".join(temp)
     log = nextime.split('-')
     nextime = datetime(int(log[0]), int(log[1]), int(log[2]), int(log[3]))
-    print(nextime.hour)
     if nextime.hour == 7:
         nextime = nextime.replace(hour=19)
     else:
@@ -158,19 +158,18 @@ def LoadLogFile(lnum, filepath):
     for row in reader:
         row = row[0].split(';')
         log = row[0]
-        print(row)
         dt = log.split('  ')[0].split('.')
         tm = log.split('  ')[1].split(':')
         dtm = datetime.datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), int(tm[1]))
         DBCursor().execute(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{str(dtm)}', {row[2]}, {row[1]})")
 
 def SearchData(timestart, timeend, line):
-    if line == 1:
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {timestart} AND {timeend}")
-    elif line == 2:
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {timestart} AND {timeend}")
-    elif line == 3:
-        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {timestart} AND {timeend}")
+    if line == '1':
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineOne WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
+    elif line == '2':
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineTwo WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
+    elif line == '3':
+        res = DBCursor().execute(f"SELECT loafs, defective, time FROM LineThree WHERE time BETWEEN {str(timestart)} AND {str(timeend)}")
     return res
 
 def Result(dtms, dtme, lines, unit, chart, erp):
@@ -185,7 +184,7 @@ def Result(dtms, dtme, lines, unit, chart, erp):
     wb = Workbook()
     ws = wb.active
     for l in lines:
-        rows = SearchData(dtms, dtme, line)
+        rows = SearchData(dtms, dtme, l)
         for row in rows:
             ws.append(row)
     if chart:

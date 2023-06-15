@@ -184,17 +184,26 @@ class DirectoryChooseWindow(QMainWindow):
 
     def btnl1_click(self):
         res = QFileDialog.getExistingDirectory(self)
-        self.btnl1.setText(res)
+        if res != "":
+            self.btnl1.setText(res)
+        else:
+            pass
         return
 
     def btnl2_click(self):
         res = QFileDialog.getExistingDirectory(self)
-        self.btnl2.setText(res)
+        if res != "":
+            self.btnl2.setText(res)
+        else:
+            pass
         return
 
     def btnl3_click(self):
         res = QFileDialog.getExistingDirectory(self)
-        self.btnl3.setText(res)
+        if res != "":
+            self.btnl3.setText(res)
+        else:
+            pass
         return
 
     def ok_click(self):
