@@ -8,13 +8,19 @@ from openpyxl.chart import LineChart, Reference
 from openpyxl.chart.axis import DateAxis
 
 def Setup():
-    doc = open('settings.json', mode='w')
-    json.dump({}, doc)
-    doc.close()
-    SaveSettings("1time", "2022-11-28-07-00-00")
-    SaveSettings("2time", "2022-11-28-07-00-00")
-    SaveSettings("3time", "2022-11-28-07-00-00")
-    DBInit()
+    try:
+        doc = open('settings.json', mode='w')
+        json.dump({}, doc)
+        doc.close()
+        SaveSettings("1time", "2022-11-28-07-00-00")
+        SaveSettings("2time", "2022-11-28-07-00-00")
+        SaveSettings("3time", "2022-11-28-07-00-00")
+    except:
+        pass
+    try:
+        DBInit()
+    except:
+        pass
 
 def Reset():#DANGEROUS
     try:
@@ -53,9 +59,8 @@ def DBInit():
 def SaveSettings(key, value):
     doc = open('settings.json', mode='r')
     data = json.load(doc)
-    data.update({key: value})
     doc.close()
-    os.remove('settings.json')
+    data.update({key: value})
     doc = open('settings.json', mode='w')
     json.dump(data, doc)
     doc.close()

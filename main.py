@@ -218,11 +218,9 @@ class DirectoryChooseWindow(QMainWindow):
         self.close()
         return
 
-try:
-    open('settings.json', 'r')
-except:
+if __name__ == '__main__':
     fileops.Setup()
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec()
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    app.exec()
