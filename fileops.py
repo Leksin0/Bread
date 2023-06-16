@@ -176,22 +176,22 @@ def SearchData(timestart, timeend, line, gu):
         lname = 'LineTwo'
     elif line == '3':
         lname = 'LineThree'
-    query = f"""SELECT strftime('%h', time) as grtime,
+    query = f"""SELECT strftime('%{gu}', time) as grtime,
     time,
     SUM(loafs) as sumloafs,
     SUM(defective) as sumdefective
     FROM {lname} 
     WHERE time BETWEEN'{str(timestart)}' AND '{str(timeend)}' GROUP BY grtime"""
-    print(DBCursor().execute(query))
     return DBCursor().execute(query)
 
-def Result(dtms, dtme, lines, unit, chart, erp):
+def Result(dtms, dtme, lines, unit, chart, erp, rpath, rname):
     wb = Workbook()
+    wb.iso_dates = True
     ws = wb.active
     mh = [1, 'B1:C1', 'D1:E1', 'F1:G1', 'H1:0']
     for line in [1, 2, 3]:
         LoadData(line)# DB update
-    if unit == 'h':
+    if unit == 'H':
         ws['A1'] = "Время"
     else:
         ws['A1'] = "Дата"
@@ -217,7 +217,7 @@ def Result(dtms, dtme, lines, unit, chart, erp):
         chart.y_axis.crossAx = 500
         chart.x_axis.title = "Date"
         chart.x_axis = DateAxis(crossAx=100)
-        if unit == 'h':
+        if unit == 'H':
             chart.x_axis.number_format = 'dd-mmm-hh:mm'
             chart.x_axis.majorTimeUnit = "hours"
         elif unit == 'd':
@@ -236,5 +236,5 @@ def Result(dtms, dtme, lines, unit, chart, erp):
         chart.set_categories(dates)
         ws.add_chart(chart, "E1")
 
-    wb.save(f"Отчет за {dtms.day}.{dtms.month}-{dtme.day}.{dtme.month}.xlsx")
+    wb.save(rpath + "/" + rname + ".xlsx")
     return

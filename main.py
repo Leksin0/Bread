@@ -10,6 +10,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.dirwindow = None
+        self.reswin = None
 
         self.cbl1 = QCheckBox("Линия 1")
         self.cbl1.clicked.connect(self.rborcb_click)
@@ -28,14 +29,14 @@ class MainWindow(QMainWindow):
         self.rbu1.clicked.connect(self.rborcb_click)
         self.rbu2 = QRadioButton("Сутки")
         self.rbu2.clicked.connect(self.rborcb_click)
-        #self.rbu3 = QRadioButton("Неделя")
-        #self.rbu3.clicked.connect(self.rborcb_click)
+        self.rbu3 = QRadioButton("Неделя")
+        self.rbu3.clicked.connect(self.rborcb_click)
         self.rbu4 = QRadioButton("Месяц")
         self.rbu4.clicked.connect(self.rborcb_click)
         unhelp = QVBoxLayout()
         unhelp.addWidget(self.rbu1)
         unhelp.addWidget(self.rbu2)
-        #unhelp.addWidget(self.rbu3)
+        unhelp.addWidget(self.rbu3)
         unhelp.addWidget(self.rbu4)
         unitselect = QGroupBox("Единица времени")
         unitselect.setLayout(unhelp)
@@ -60,7 +61,7 @@ class MainWindow(QMainWindow):
         btchdir = QPushButton("Указать расположение первичных данных")
         btchdir.clicked.connect(self.chdir_click)
         self.btresult = QPushButton("Готово")
-        self.btresult.clicked.connect(self.GetResult)
+        self.btresult.clicked.connect(self.btres_click)
 
         layout = QGridLayout()
         layout.addWidget(lbts, 0, 0)
@@ -88,41 +89,41 @@ class MainWindow(QMainWindow):
     def rborcb_click(self):
         self.btresult.setText("Готово")
 
-    def GetResult(self):
+    def btres_click(self):
         if LoadSettings("1path") is None or LoadSettings("2path") is None or LoadSettings("3path") is None:
             self.btresult.setText("Укажите папки первичных данных")
             return
-        else:
-            pass
         if not self.rbu1.isChecked() and not self.rbu2.isChecked() and not self.rbu3.isChecked() and not self.rbu4.isChecked():
             self.btresult.setText("Выберите еденицу времени")
             return
-        else:
-            if self.rbu1.isChecked():
-                unit = 'h'
-            elif self.rbu2.isChecked():
-                unit = 'd'
-            elif self.rbu3.isChecked():
-                unit = 'w'
-            elif self.rbu4.isChecked():
-                unit = 'm'
         if not self.cbl1.isChecked() and not self.cbl2.isChecked() and not self.cbl3.isChecked():
             self.btresult.setText("Выберите хотя бы одну линию")
             return
+        if self.txerp.text() == "" and self.cberp.isChecked():
+            self.btresult.setText("Укажите норму производства")
+            return
+        if self.reswin == None:
+            self.reswin = ResultWindow()
+        self.reswin.show()
+
+    def GetResult(self, rpath, rname):
+        if self.rbu1.isChecked():
+            unit = 'H'
+        elif self.rbu2.isChecked():
+            unit = 'd'
+        elif self.rbu3.isChecked():
+            unit = 'W'
+        elif self.rbu4.isChecked():
+            unit = 'm'
         else:
-            lines = []
-            if self.cbl1.isChecked():
-                lines.append('1')
-            if self.cbl2.isChecked():
-                lines.append('2')
-            if self.cbl3.isChecked():
-                lines.append('3')
-        try:
-            a = int(self.txerp.text())
-        except:
-            if self.cberp.isChecked():
-                self.btresult.setText("Укажите норму производства")
-                return
+            pass
+        lines = []
+        if self.cbl1.isChecked():
+            lines.append('1')
+        if self.cbl2.isChecked():
+            lines.append('2')
+        if self.cbl3.isChecked():
+            lines.append('3')
         if self.cberp.isChecked():
             erp = [True, a]
         else:
@@ -145,7 +146,7 @@ class MainWindow(QMainWindow):
         for k in dtme.split(' ')[1].split(':'):
             log.append(k)
         dtme = datetime(int(log[2]), int(log[1]), int(log[0]), int(log[3]), int(log[4]))
-        Result(dtms, dtme, lines, unit, chart, erp)
+        Result(dtms, dtme, lines, unit, chart, erp, rpath, rname)
 
 class DirectoryChooseWindow(QMainWindow):
     def __init__(self):
@@ -226,6 +227,38 @@ class DirectoryChooseWindow(QMainWindow):
     def cancel_click(self):
         self.close()
         return
+
+class ResultWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        lb1 = QLabel("Выберите папку")
+        lb2 = QLabel("Укажите имя файла")
+        self.btdir = QPushButton(" ")
+        self.btdir.clicked.connect(self.btdir_click)
+        self.nmedt = QLineEdit("Новый отчёт")
+        self.btok = QPushButton("Сохранить")
+        self.btok.clicked.connect(self.ok_click)
+
+        layout = QFormLayout()
+        layout.addRow(lb1, self.btdir)
+        layout.addRow(lb2, self.nmedt)
+        layout.addWidget(self.btok)
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
+        self.setWindowTitle("")
+
+    def btdir_click(self):
+        res = QFileDialog.getExistingDirectory(self)
+        if res != "":
+            self.btdir.setText(res)
+        else:
+            pass
+        return
+
+    def ok_click(self):
+        if self.btdir.text() != " ":
+            window.GetResult(self.btdir.text(), self.nmedt.text())
 
 if __name__ == '__main__':
     fileops.Setup()
