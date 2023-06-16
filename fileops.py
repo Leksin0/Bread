@@ -166,7 +166,7 @@ def LoadLogFile(lnum, filepath):
         log = row[0]
         dt = log.split('  ')[0].split('.')
         tm = log.split('  ')[1].split(':')
-        dtm = datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), int(tm[1]))
+        dtm = datetime(int(dt[2]), int(dt[1]), int(dt[0]), int(tm[0]), 0)
         DBInsert(f"INSERT INTO {line} (time, loafs, defective) VALUES ('{str(dtm)}', {row[2]}, {row[1]})")
 
 def SearchData(timestart, timeend, line, gu):
@@ -176,7 +176,8 @@ def SearchData(timestart, timeend, line, gu):
         lname = 'LineTwo'
     elif line == '3':
         lname = 'LineThree'
-    query = f"""SELECT strftime('%{gu}', time) as grtime,
+    query = f"""SELECT
+    strftime('%H', time) as grtime,
     time,
     SUM(loafs) as sumloafs,
     SUM(defective) as sumdefective
@@ -199,16 +200,33 @@ def Result(dtms, dtme, lines, unit, chart, erp, rpath, rname):
         ws[mh[mh[0]].split(':')[0]] = f"Линия {l}"
         ws.merge_cells(mh[mh[0]])
         mh[0] += 1
-
     if erp[0]:
         ws[mh[mh[0]].split(':')[0]] = f"Норматив"
 
+    setime = True
+    cl = "B"
+    cd = "C"
     for l in lines:
+        r = "3"
+        ws[cl+'2'] = "Батоны " + l
+        ws[cd+'2'] = "Брак " + l
         rows = SearchData(dtms, dtme, l, unit)
         for row in rows:
-            print(row)
-            ws.append(row)
-
+            ws[cl+r] = row[2]
+            ws[cd+r] = row[3]
+            r = str(int(r) + 1)
+            if setime:
+                ws['A'+str(int(r)-1)] = row[1][:14]+'00'
+        setime = False
+        ws[cl+r] = f"=СУММ({cl+'2'}: {cl+str(int(r)-1)})"
+        ws[cd+r] = f"=СУММ({cd+'2'}: {cd+str(int(r)-1)})"
+        if cl == "B":
+            cl = "D"
+            cd = "E"
+        elif cl == "D":
+            cl = "F"
+            cd = "G"
+    ws['A'+r] = "Итого:"
     if chart:
         chart = LineChart()
         chart.title = ""
@@ -218,8 +236,8 @@ def Result(dtms, dtme, lines, unit, chart, erp, rpath, rname):
         chart.x_axis.title = "Date"
         chart.x_axis = DateAxis(crossAx=100)
         if unit == 'H':
-            chart.x_axis.number_format = 'dd-mmm-hh:mm'
-            chart.x_axis.majorTimeUnit = "hours"
+            chart.x_axis.number_format = 'dd-mmm hh'
+            chart.x_axis.majorTimeUnit = "days"
         elif unit == 'd':
             chart.x_axis.number_format = 'dd-mmm'
             chart.x_axis.majorTimeUnit = "days"
@@ -229,12 +247,10 @@ def Result(dtms, dtme, lines, unit, chart, erp, rpath, rname):
         elif unit == 'm':
             chart.x_axis.number_format = 'mmm-yyyy'
             chart.x_axis.majorTimeUnit = "months"
-
-        data = Reference(ws, min_col=2, min_row=1, max_col=4, max_row=7)
+        data = Reference(ws, min_col=2, min_row=2, max_col=len(lines) * 2 + 1, max_row=r)
         chart.add_data(data, titles_from_data=True)
-        dates = Reference(ws, min_col=1, min_row=2, max_row=7)
+        dates = Reference(ws, min_col=1, min_row=3, max_row=r)
         chart.set_categories(dates)
-        ws.add_chart(chart, "E1")
-
+        ws.add_chart(chart, 'I1')
     wb.save(rpath + "/" + rname + ".xlsx")
     return
